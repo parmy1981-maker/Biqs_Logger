@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "BiqsDrive Logger",
+  "version": "5.7",
+  "description": "Logt planningsacties automatisch naar Google Sheets",
+
+  "content_scripts": [
+    {
+      "matches": ["https://vtiieper.biqsdrive.be/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "biqsdrive-logger@vtiieper",
+      "strict_min_version": "128.0",
+      "update_url": "https://raw.githubusercontent.com/parmy1981-maker/Biqs_Logger/main/updates.json"
+    }
+  }
+}
