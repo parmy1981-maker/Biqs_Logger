@@ -3,9 +3,9 @@
     "biqsdrive-logger@vtiieper": {
       "updates": [
         {
-          "version": "5.9",
-          "update_link": "https://github.com/parmy1981-maker/Biqs_Logger/releases/download/v5.9/749ac3e2aad24016a99a-5.9.xpi",
-          "update_hash": "sha256:670b48c06a19bfce7719f5202ace1e73aaea72fd43b0fb5633936eecd623e8e5"
+          "version": "5.10",
+          "update_link": "https://github.com/parmy1981-maker/Biqs_Logger/releases/download/v5.10/749ac3e2aad24016a99a-5.10.xpi",
+          "update_hash": "sha256:d1b503e5311f6d183e38fb5f37072eb1cd92ddb5ee61d834c84c36f0ec276251"
         }
       ]
     }
