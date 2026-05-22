@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiqsDrive Logger — Installatie</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      max-width: 520px;
+      width: 100%;
+      padding: 2.5rem;
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .version {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 1.5rem;
+    }
+
+    .description {
+      font-size: 0.95rem;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #e66000;
+      color: white;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.85rem 2rem;
+      border-radius: 8px;
+      transition: background 0.2s;
+      margin-bottom: 2rem;
+    }
+
+    .btn:hover { background: #c85500; }
+
+    .steps {
+      border-top: 1px solid #eee;
+      padding-top: 1.5rem;
+    }
+
+    .steps h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-bottom: 1rem;
+    }
+
+    .step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .step-num {
+      background: #e66000;
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .note {
+      margin-top: 1.5rem;
+      background: #fff8e1;
+      border-left: 3px solid #f0b429;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: #666;
+      border-radius: 0 6px 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="icons/icon128.png" alt="BiqsDrive Logger logo">
+    <h1>BiqsDrive Logger</h1>
+    <p class="version">Versie 5.7 &mdash; Firefox extensie</p>
+    <p class="description">
+      Logt automatisch alle planningsacties (lessen, examens, verlof, betalingen&hellip;)
+      naar Google Sheets. Werkt op <strong>vtiieper.biqsdrive.be</strong>.
+    </p>
+
+    <a class="btn" href="https://github.com/parmy1981-maker/Biqs_Logger/releases/download/v5.7/749ac3e2aad24016a99a-5.7.xpi">
+      Downloaden voor Firefox
+    </a>
+
+    <div class="steps">
+      <h2>Installatie</h2>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>Klik op <strong>Downloaden voor Firefox</strong> hierboven.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>Onderaan Firefox verschijnt de download. Klik op het bestandje om het te openen.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>Firefox vraagt om bevestiging &mdash; klik <strong>Toevoegen</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>Klaar. De extensie start automatisch bij elke pagina op biqsdrive.be.</div>
+      </div>
+    </div>
+
+    <div class="note">
+      Updates worden automatisch geïnstalleerd. Eénmalig installeren per computer is voldoende.
+    </div>
+  </div>
+</body>
+</html>
