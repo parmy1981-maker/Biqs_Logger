@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const VERSION        = 'v5.9';
+    const VERSION        = 'v5.10';
     const SNIFFER_ACTIEF = true;   // ← false = sniffer volledig uitgeschakeld (geen interceptie, geen paneel)
     const SHEET_URL      = "https://script.google.com/macros/s/AKfycbzxYBAlxct3qSvZ4j1tX02fEumeeG6sFpwxCNR9lw4xbjVO4OJ7UqoVrAQW71HI8Iy5/exec";
 
@@ -160,6 +160,7 @@
             if (!sid || sid === 'undefined')            return ['VERWIJDEREN', 'Verlof'];
             return ['VERWIJDEREN', 'Lesblok'];
         }
+        if (u.includes('update_events.php') && method === 'POST')           return ['WIJZIGEN',   'Afspraak'];
         if (u.includes('/api/event') && method === 'PUT') {
             if (examCache[rb.id || '']) return null;
             const resAny = res || {};
@@ -355,6 +356,50 @@
             return;
         }
 
+        // ── WIJZIGEN AFSPRAAK ────────────────────────────────────
+        if (actie === 'WIJZIGEN') {
+            const oldInstructor = snap.instructorName || (eventCache[rb.id] || {}).instructorName || '';
+            const oldStartTime  = (snap.start || '').split(' ')[1] || '';
+            const oldEndTime    = (snap.end   || '').split(' ')[1] || '';
+            const oldTimePart   = oldStartTime + (oldEndTime ? ' - ' + oldEndTime : '');
+
+            let newTimeslot = '';
+            if (rb.start) {
+                const [datePart, startFull] = rb.start.split(' ');
+                const startTime     = startFull ? startFull.substring(0, 5) : '';
+                const dateFormatted = datePart  ? datePart.split('-').reverse().join('-') : '';
+                const endFull       = rb.end    ? rb.end.split(' ')[1] : '';
+                const endTime       = endFull   ? endFull.substring(0, 5) : '';
+                newTimeslot = dateFormatted + (startTime ? ' ' + startTime : '') + (endTime ? ' - ' + endTime : '');
+            }
+
+            const params = [
+                oldInstructor ? 'Vorige instructeur: ' + oldInstructor : '',
+                oldTimePart   ? 'Vorige tijd: ' + oldTimePart          : ''
+            ].filter(Boolean).join(' | ');
+
+            setTimeout(() => {
+                const cached = eventCache[rb.id] || {};
+                const vId    = rb.vehicleId   || cached.vehicleId   || '';
+                const vNaam  = cached.vehicleName || '';
+                const data   = {
+                    userEmail: GEBRUIKER, action: 'WIJZIGEN', type: 'Afspraak',
+                    instructor:  cached.instructorName || rb.instructorId || '',
+                    studentName: cached.studentName    || '',
+                    studentId:   rb.studentId          || cached.studentId || '',
+                    timeslot:    newTimeslot,
+                    vehicle:     vId && vNaam ? vId + ' - ' + vNaam : vId,
+                    license:     rb.driverlicenceId    || '',
+                    eventId:     rb.id                 || '',
+                    description: '',
+                    params
+                };
+                console.log('%c SHEET DATA (WIJZIGEN):', 'color:#3498db;font-weight:bold;', data);
+                origFetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) }).catch(() => {});
+            }, 500);
+            return;
+        }
+
         // ── LESBLOK / VERLOF / PLANNING ──────────────────────────
         const isDelete    = actie === 'VERWIJDEREN';
         const isToekennen = actie === 'TOEKENNEN';
@@ -431,6 +476,8 @@
             params = delen.join(' | ');
         } else if (type === 'Planning (onbetaald)' || type === 'Planning (betaald)') {
             params = '';
+        } else if (type === 'Afspraak') {
+            params = '';
         } else if (type !== 'Verlof') {
             params = VERSION + ' | req: ' + JSON.stringify(rb) + ' | res: ' + JSON.stringify(res);
         }
@@ -446,6 +493,7 @@
             vehicle:     vehicle,
             license:     isToekennen                      ? (res.LicenceName || res.LicenceId || '') :
                          (isDelete && type === 'Lesblok') ? (cached.licenceName || '') :
+                         type === 'Afspraak'              ? [rb.driverlicenceId, snap.title].filter(Boolean).join(' | ') :
                          (rb.licenceType || rb.driverlicenceId || ''),
             eventId:     eventId,
             description: type === 'Lesblok'

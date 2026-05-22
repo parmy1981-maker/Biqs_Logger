@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BiqsDrive Logger",
-  "version": "5.9",
+  "version": "5.10",
   "description": "Logt planningsacties automatisch naar Google Sheets",
 
   "content_scripts": [
