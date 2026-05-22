@@ -1,0 +1,13 @@
+{
+  "addons": {
+    "biqsdrive-logger@vtiieper": {
+      "updates": [
+        {
+          "version": "5.7",
+          "update_link": "https://github.com/parmy1981-maker/Biqs_Logger/releases/download/v5.7/749ac3e2aad24016a99a-5.7.xpi",
+          "update_hash": "sha256:58b2386662cb51b4f82dfb7cc92b7b27c1cb20ce63d1b56e21fe1f29987fb3af"
+        }
+      ]
+    }
+  }
+}
