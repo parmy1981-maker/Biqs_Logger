@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const VERSION        = 'v5.8';
+    const VERSION        = 'v5.9';
     const SNIFFER_ACTIEF = true;   // ← false = sniffer volledig uitgeschakeld (geen interceptie, geen paneel)
     const SHEET_URL      = "https://script.google.com/macros/s/AKfycbzxYBAlxct3qSvZ4j1tX02fEumeeG6sFpwxCNR9lw4xbjVO4OJ7UqoVrAQW71HI8Iy5/exec";
 
@@ -712,6 +712,24 @@
             if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
         }
     });
+
+    (function checkAndLogUpdate() {
+        const KEY    = 'bds_version';
+        const stored = localStorage.getItem(KEY);
+        if (stored !== null && stored !== VERSION) {
+            origFetch(SHEET_URL, {
+                method: 'POST',
+                mode:   'no-cors',
+                body:   JSON.stringify({
+                    userEmail: GEBRUIKER, action: 'UPDATE', type: VERSION,
+                    instructor: '', studentName: '', studentId: '',
+                    timeslot: '', vehicle: '', license: '',
+                    eventId: '', description: '', params: 'Vorige versie: ' + stored
+                })
+            }).catch(() => {});
+        }
+        localStorage.setItem(KEY, VERSION);
+    })();
 
     console.log('%c BiqsDrive Logger ' + VERSION + ' actief — gebruiker: ' + GEBRUIKER, 'background:#e94560;color:#fff;padding:6px 12px;font-size:14px;border-radius:4px;');
 
