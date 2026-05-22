@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const VERSION        = 'v5.7';
+    const VERSION        = 'v5.8';
     const SNIFFER_ACTIEF = true;   // ← false = sniffer volledig uitgeschakeld (geen interceptie, geen paneel)
     const SHEET_URL      = "https://script.google.com/macros/s/AKfycbzxYBAlxct3qSvZ4j1tX02fEumeeG6sFpwxCNR9lw4xbjVO4OJ7UqoVrAQW71HI8Iy5/exec";
 
@@ -543,13 +543,16 @@
     function buildPanel() {
         const panel = document.createElement('div');
         panel.id = 'bds-panel';
-        panel.style.cssText = 'position:fixed;top:10px;right:10px;width:420px;max-height:600px;background:#12121f;color:#eee;border:2px solid #2c2c4a;border-radius:8px;z-index:2147483647;font-family:monospace;font-size:11px;box-shadow:0 4px 24px rgba(0,0,0,.7);display:flex;flex-direction:column;';
+        panel.style.cssText = 'position:fixed;top:10px;right:10px;width:420px;max-height:600px;background:#12121f;color:#eee;border:2px solid #2c2c4a;border-radius:8px;z-index:2147483647;font-family:monospace;font-size:11px;box-shadow:0 4px 24px rgba(0,0,0,.7);display:none;flex-direction:column;';
 
         const hdr = document.createElement('div');
         hdr.style.cssText = 'padding:8px 12px;background:#1e1e3a;border-radius:6px 6px 0 0;cursor:move;user-select:none;';
         hdr.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
                       + '<span style="font-weight:bold;color:#e94560;font-size:13px;">BiqsDrive Logger ' + VERSION + '</span>'
+                      + '<div style="display:flex;align-items:center;gap:8px;">'
                       + '<span id="bds-count" style="color:#7f8c8d;font-size:10px;">0 captures</span>'
+                      + '<span id="bds-close" style="color:#e74c3c;cursor:pointer;font-size:18px;line-height:1;" title="Sluiten">&times;</span>'
+                      + '</div>'
                       + '</div>'
                       + '<div style="color:#7f8c8d;font-size:10px;margin-top:2px;">'
                       + 'Gebruiker: <span style="color:#f1c40f;">' + GEBRUIKER + '</span>'
@@ -582,6 +585,7 @@
         panel.append(hdr, btnBar, panelBody);
         document.body.appendChild(panel);
         makeDraggable(panel, hdr);
+        document.getElementById('bds-close').onclick = () => { panel.style.display = 'none'; };
     }
 
     function updateCount() {
@@ -701,6 +705,14 @@
     } else {
         document.addEventListener('DOMContentLoaded', buildPanel);
     }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.altKey && e.code === 'KeyL') {
+            const panel = document.getElementById('bds-panel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        }
+    });
+
     console.log('%c BiqsDrive Logger ' + VERSION + ' actief — gebruiker: ' + GEBRUIKER, 'background:#e94560;color:#fff;padding:6px 12px;font-size:14px;border-radius:4px;');
 
 })();
