@@ -1,9 +1,10 @@
 (function () {
     'use strict';
 
-    const VERSION        = 'v5.10';
+    const VERSION        = 'v6.2';
     const SNIFFER_ACTIEF = true;   // ← false = sniffer volledig uitgeschakeld (geen interceptie, geen paneel)
     const SHEET_URL      = "https://script.google.com/macros/s/AKfycbzxYBAlxct3qSvZ4j1tX02fEumeeG6sFpwxCNR9lw4xbjVO4OJ7UqoVrAQW71HI8Iy5/exec";
+    const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1b4Vvlzs0PN5mqlHk-Na0of0i4VwyD09_DSV4Xe60M4w/edit";
 
     if (!SNIFFER_ACTIEF) return;
 
@@ -538,6 +539,176 @@
     }
 
     // =========================================================
+    // GEOPEND LESBLOK (voor ID-Log knop)
+    // =========================================================
+    // Bij het openen van een bestaand lesblok vraagt BiqsDrive de voertuigen
+    // op met event_id=<ID> in de URL. Bij een klik op ID-Log wordt enkel het
+    // laatste verzoek gecontroleerd op een event_id.
+    // Examens: bij het openen stuurt BiqsDrive geen ID mee. We zoeken het geopende
+    // examen op in de laatst geladen kalendergegevens (events.php) aan de hand van
+    // datum, begin-/einduur, examentype, instructeur en leerling uit het venster.
+    const calendarEvents = {};   // alle geladen kalender-items, per ID
+
+    function readField(name) {
+        const el = document.querySelector('[name="' + name + '"]') || document.getElementById(name);
+        if (!el) return null;
+        const value = el.tagName === 'SELECT'
+            ? (el.options[el.selectedIndex] ? el.options[el.selectedIndex].textContent.trim() : '')
+            : (el.value || '').trim();
+        return { el, value };
+    }
+
+    function isVisible(el) {
+        return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+    }
+
+    // Geeft { id } terug, of { error } met een melding
+    function findOpenExamId() {
+        const dateF = readField('examDateInput');
+        if (!dateF || !isVisible(dateF.el) || !dateF.value) return null;   // geen examen open
+
+        const dm = dateF.value.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+        const startF = readField('examStartTimeInput');
+        const endF   = readField('examEndTimeInput');
+        if (!dm || !startF || !startF.value) return { error: 'Examen-ID niet gevonden (datum/uur onbekend)' };
+
+        const isoDate = dm[3] + '-' + dm[2] + '-' + dm[1];
+        const start   = isoDate + ' ' + startF.value.slice(0, 5);
+        const end     = endF && endF.value ? isoDate + ' ' + endF.value.slice(0, 5) : '';
+
+        const instrF = readField('examInstructor');
+        const instrM = instrF && instrF.value.match(/^\[(.*?)\]/);
+        const stuF   = readField('examStudent');
+        const stuM   = stuF && stuF.value.match(/^\[(.*?)\]/);
+        const typeF  = readField('examType');
+
+        // Harde voorwaarden: echt examen (geen reistijd-blok EB_/EA_), zelfde datum + startuur,
+        // en indien ingevuld: exact dezelfde instructeur en dezelfde leerling.
+        let cands = Object.values(calendarEvents).filter(e => {
+            const id   = String(e.id || '');
+            const code = (e.timesheetCode || '').toUpperCase();
+            if (!id || /^E[AB]_/.test(id) || code === 'EXAM_TIME' || !code.includes('EXAM')) return false;
+            if ((e.start || '').slice(0, 16) !== start) return false;
+            if (instrM && e.instructorId !== instrM[1] && e.resourceId !== instrM[1]) return false;
+            if (stuM && e.studentId !== stuM[1]) return false;
+            return true;
+        });
+
+        // Zachte voorwaarden: enkel toepassen als er nog iets overblijft
+        const narrow = (fn) => {
+            const f = cands.filter(fn);
+            if (f.length) cands = f;
+        };
+        if (end) narrow(e => (e.end || '').slice(0, 16) === end);
+        if (!stuM) narrow(e => !e.studentId || e.studentId === 'ex_slot');   // geen leerling → vrij slot
+        if (typeF && typeF.value) narrow(e => (e.titleShort || '').trim() === typeF.value);
+
+        console.log('%c ID-Log examen-zoektocht:', 'color:#f1c40f;font-weight:bold;',
+            { start, end, instructeur: instrM ? instrM[1] : '', leerling: stuM ? stuM[1] : '',
+              type: typeF ? typeF.value : '', gevonden: cands.map(e => e.id) });
+
+        if (cands.length === 1) return { id: String(cands[0].id) };
+        if (cands.length === 0) return { error: 'Examen-ID niet gevonden — herlaad de kalender (F5) en open het examen opnieuw' };
+        return { error: 'Meerdere examens gevonden (' + cands.length + ') — zie console (F12)' };
+    }
+
+    function getLastEventId() {
+        const last = captured[captured.length - 1];
+        if (!last) return '';
+        const m = (last.url || '').match(/[?&]event_id=([^&]*)/);
+        if (!m) return '';
+        let id;
+        try { id = decodeURIComponent(m[1].replace(/\+/g, ' ')).trim(); } catch (_) { id = m[1].trim(); }
+        return (id && id !== 'undefined' && id !== 'null') ? id : '';
+    }
+
+    function showStatus(text, color) {
+        const el = document.getElementById('bds-status');
+        if (!el) return;
+        el.textContent = text;
+        el.style.color = color;
+        el.hidden = false;
+        clearTimeout(showStatus._t);
+        showStatus._t = setTimeout(() => { el.hidden = true; }, 4000);
+    }
+
+    // Geeft true terug als het kopiëren gelukt is
+    async function copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch (_) {}
+        // Fallback via verborgen textarea
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:-1000px;opacity:0;';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            ta.remove();
+            return ok;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    async function idLog() {
+        // Eerst het laatste verzoek (lesblok), anders een geopend examen
+        let id = getLastEventId();
+        if (!id) {
+            const exam = findOpenExamId();
+            if (exam && exam.error) {
+                showStatus(exam.error, '#e74c3c');
+                return;
+            }
+            if (exam) id = exam.id;
+        }
+        if (!id) {
+            showStatus('Selecteer eerst een lesblok of examen', '#e74c3c');
+            return;
+        }
+
+        // 1. Eerst het ID in het klembord bewaren
+        const copied = await copyToClipboard(id);
+        if (copied) {
+            showStatus('ID gekopieerd: ' + id, '#2ecc71');
+        } else {
+            showStatus('Kopiëren mislukt — ID: ' + id, '#e67e22');
+        }
+
+        // 2. Pas daarna een nieuw tabblad openen (moet binnen de klik gebeuren, anders blokkeert de popup-blokker)
+        const tab = window.open('about:blank', '_blank');
+        if (!tab) {
+            showStatus('Nieuw tabblad geblokkeerd — sta pop-ups toe voor deze site', '#e74c3c');
+            return;
+        }
+        try {
+            tab.document.title = 'BiqsDrive ID-Log';
+            tab.document.body.innerHTML = '<p style="font-family:sans-serif;padding:20px;">ID-Log wordt opgebouwd voor <b></b>…</p>';
+            tab.document.querySelector('b').textContent = id;
+        } catch (_) {}
+
+        // 3. Apps Script vult het tabblad "ID-Log" en geeft het tabblad-nummer (gid) terug
+        let target = SPREADSHEET_URL;
+        try {
+            const resp = await origFetch(SHEET_URL + '?eventId=' + encodeURIComponent(id) + '&format=json');
+            const json = await resp.json();
+            if (json && json.status === 'ok' && json.gid != null) {
+                target = SPREADSHEET_URL + '#gid=' + json.gid;
+            }
+        } catch (e) {
+            console.warn('ID-Log: filteren mislukt', e);
+            showStatus('Filteren mislukt — spreadsheet wordt zonder filter geopend', '#e67e22');
+        }
+
+        // 4. Spreadsheet openen op het tabblad ID-Log
+        tab.location.href = target;
+    }
+
+    // =========================================================
     // CENTRALE LOG
     // =========================================================
     const captured = [];
@@ -547,6 +718,9 @@
 
         if ((entry.url || '').toLowerCase().includes('events.php') && Array.isArray(entry.responseBody)) {
             updateEventCache(entry.responseBody);
+            if (/(^|\/)events\.php/i.test(entry.url || '')) {
+                entry.responseBody.forEach(e => { if (e && e.id) calendarEvents[e.id] = e; });
+            }
         }
 
         if ((entry.url || '').toLowerCase().includes('delete_exam') && entry.status === 409) {
@@ -604,15 +778,16 @@
                       + '</div>'
                       + '<div style="color:#7f8c8d;font-size:10px;margin-top:2px;">'
                       + 'Gebruiker: <span style="color:#f1c40f;">' + GEBRUIKER + '</span>'
-                      + '</div>';
+                      + '</div>'
+                      + '<div id="bds-status" hidden style="font-size:11px;font-weight:bold;margin-top:3px;"></div>';
 
         const btnBar = document.createElement('div');
         btnBar.style.cssText = 'display:flex;gap:5px;padding:4px 10px;background:#16163a;';
 
-        const mkBtn = (label, bg, fn) => {
+        const mkBtn = (label, bg, fn, fg) => {
             const b = document.createElement('button');
             b.textContent = label;
-            b.style.cssText = 'background:' + bg + ';color:#fff;border:none;padding:3px 9px;border-radius:4px;cursor:pointer;font-size:11px;';
+            b.style.cssText = 'background:' + bg + ';color:' + (fg || '#fff') + ';border:none;padding:3px 9px;border-radius:4px;cursor:pointer;font-size:11px;';
             b.onclick = fn;
             return b;
         };
@@ -627,7 +802,8 @@
                 const hidden = panelBody.style.display === 'none';
                 panelBody.style.display = hidden ? '' : 'none';
                 btnBar.style.display    = hidden ? '' : 'none';
-            })
+            }),
+            mkBtn('ID-Log', '#f1c40f', idLog, '#12121f')
         );
 
         panel.append(hdr, btnBar, panelBody);
